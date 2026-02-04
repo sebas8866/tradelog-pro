@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 
 interface User {
   email: string
-  createdAt: string
+  id?: string
 }
 
 export default function Home() {
@@ -19,7 +19,14 @@ export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [userEmail, setUserEmail] = useState('')
   const [authError, setAuthError] = useState('')
-  const [authSuccess, setAuthSuccess] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [usingSupabase, setUsingSupabase] = useState(false)
+
+  // Check for Supabase availability
+  useEffect(() => {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    setUsingSupabase(!!supabaseUrl && supabaseUrl.length > 0)
+  }, [])
 
   // Check for existing session on load
   useEffect(() => {
@@ -34,14 +41,12 @@ export default function Home() {
   const handleGetStarted = () => {
     setAuthMode('signup')
     setAuthError('')
-    setAuthSuccess('')
     setShowAuthModal(true)
   }
 
   const handleSignIn = () => {
     setAuthMode('signin')
     setAuthError('')
-    setAuthSuccess('')
     setShowAuthModal(true)
   }
 
@@ -49,19 +54,21 @@ export default function Home() {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
   }
 
-  const handleAuth = (e: React.FormEvent) => {
+  const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault()
     setAuthError('')
-    setAuthSuccess('')
+    setIsLoading(true)
 
     // Validation
     if (!validateEmail(email)) {
       setAuthError('Please enter a valid email address')
+      setIsLoading(false)
       return
     }
 
     if (password.length < 6) {
       setAuthError('Password must be at least 6 characters')
+      setIsLoading(false)
       return
     }
 
@@ -72,25 +79,30 @@ export default function Home() {
       
       if (userExists) {
         setAuthError('An account with this email already exists. Please sign in.')
+        setIsLoading(false)
         return
       }
 
       if (password !== confirmPassword) {
         setAuthError('Passwords do not match')
+        setIsLoading(false)
         return
       }
+
+      // Simulate network delay
+      await new Promise(resolve => setTimeout(resolve, 500))
 
       // Create new user
       const newUser: User = {
         email,
-        createdAt: new Date().toISOString()
+        id: Math.random().toString(36).substring(2, 15)
       }
       
       // Save user to users list
       existingUsers.push(newUser)
       localStorage.setItem('tradelog_users', JSON.stringify(existingUsers))
       
-      // Save password (in real app, this would be hashed)
+      // Save password (in real app, this would be hashed server-side)
       localStorage.setItem(`tradelog_password_${email}`, password)
       
       // Set current session
@@ -102,6 +114,7 @@ export default function Home() {
       setEmail('')
       setPassword('')
       setConfirmPassword('')
+      setIsLoading(false)
       
       // Redirect to dashboard
       router.push('/dashboard')
@@ -112,12 +125,18 @@ export default function Home() {
       
       if (!user) {
         setAuthError('No account found with this email. Please sign up.')
+        setIsLoading(false)
         return
       }
 
       const storedPassword = localStorage.getItem(`tradelog_password_${email}`)
+      
+      // Simulate network delay
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
       if (storedPassword !== password) {
         setAuthError('Incorrect password. Please try again.')
+        setIsLoading(false)
         return
       }
 
@@ -129,6 +148,7 @@ export default function Home() {
       setShowAuthModal(false)
       setEmail('')
       setPassword('')
+      setIsLoading(false)
       
       // Redirect to dashboard
       router.push('/dashboard')
@@ -168,12 +188,6 @@ export default function Home() {
             {authError && (
               <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
                 {authError}
-              </div>
-            )}
-
-            {authSuccess && (
-              <div className="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-emerald-400 text-sm">
-                {authSuccess}
               </div>
             )}
             
@@ -218,9 +232,17 @@ export default function Home() {
               
               <button 
                 type="submit"
-                className="w-full bg-white text-black px-4 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
+                disabled={isLoading}
+                className="w-full bg-white text-black px-4 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
               >
-                {authMode === 'signup' ? 'Start Free Trial' : 'Sign In'}
+                {isLoading ? (
+                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                ) : (
+                  authMode === 'signup' ? 'Start Free Trial' : 'Sign In'
+                )}
               </button>
             </form>
             
@@ -231,7 +253,6 @@ export default function Home() {
                   onClick={() => {
                     setAuthMode(authMode === 'signup' ? 'signin' : 'signup')
                     setAuthError('')
-                    setAuthSuccess('')
                   }}
                   className="text-indigo-400 ml-1 hover:underline"
                 >
@@ -244,7 +265,6 @@ export default function Home() {
               onClick={() => {
                 setShowAuthModal(false)
                 setAuthError('')
-                setAuthSuccess('')
               }}
               className="absolute top-4 right-4 text-gray-400 hover:text-white"
             >
@@ -356,7 +376,7 @@ export default function Home() {
           </p>
         </div>
 
-        {/* Dashboard Preview - Now Clickable */}
+        {/* Dashboard Preview */}
         <div 
           className="max-w-6xl mx-auto mt-20 px-4 cursor-pointer hover:scale-[1.02] transition-transform"
           onClick={() => router.push('/dashboard')}
