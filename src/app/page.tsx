@@ -1,15 +1,126 @@
+'use client'
+
 import './globals.css'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 
 export default function Home() {
+  const router = useRouter()
+  const [showAuthModal, setShowAuthModal] = useState(false)
+  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signup')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [userEmail, setUserEmail] = useState('')
+
+  const handleGetStarted = () => {
+    setAuthMode('signup')
+    setShowAuthModal(true)
+  }
+
+  const handleSignIn = () => {
+    setAuthMode('signin')
+    setShowAuthModal(true)
+  }
+
+  const handleAuth = (e: React.FormEvent) => {
+    e.preventDefault()
+    // Simulate auth
+    setIsLoggedIn(true)
+    setUserEmail(email)
+    setShowAuthModal(false)
+    router.push('/dashboard')
+  }
+
+  const handleLogout = () => {
+    setIsLoggedIn(false)
+    setUserEmail('')
+  }
+
+  const scrollToSection = (id: string) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
+  }
+
   return (
     <main className="min-h-screen bg-[#0a0a0a] text-white overflow-x-hidden">
       {/* Background gradient */}
       <div className="fixed inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(120,119,198,0.3),rgba(0,0,0,0))] pointer-events-none" />
       
+      {/* Auth Modal */}
+      {showAuthModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm">
+          <div className="bg-[#111] border border-white/10 rounded-2xl p-8 max-w-md w-full mx-4">
+            <h2 className="text-2xl font-bold mb-2">
+              {authMode === 'signup' ? 'Create your account' : 'Welcome back'}
+            </h2>
+            <p className="text-gray-400 mb-6">
+              {authMode === 'signup' 
+                ? 'Start your free 14-day trial today' 
+                : 'Sign in to access your dashboard'}
+            </p>
+            
+            <form onSubmit={handleAuth} className="space-y-4">
+              <div>
+                <label className="block text-sm text-gray-400 mb-2">Email</label>
+                <input 
+                  type="email" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:border-indigo-500 transition-colors"
+                  placeholder="you@example.com"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-2">Password</label>
+                <input 
+                  type="password" 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:border-indigo-500 transition-colors"
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
+              <button 
+                type="submit"
+                className="w-full bg-white text-black px-4 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
+              >
+                {authMode === 'signup' ? 'Start Free Trial' : 'Sign In'}
+              </button>
+            </form>
+            
+            <div className="mt-6 text-center">
+              <p className="text-gray-400 text-sm">
+                {authMode === 'signup' ? 'Already have an account?' : "Don't have an account?"}
+                <button 
+                  onClick={() => setAuthMode(authMode === 'signup' ? 'signin' : 'signup')}
+                  className="text-indigo-400 ml-1 hover:underline"
+                >
+                  {authMode === 'signup' ? 'Sign in' : 'Sign up'}
+                </button>
+              </p>
+            </div>
+            
+            <button 
+              onClick={() => setShowAuthModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white"
+            >
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+      
       {/* Navigation */}
       <nav className="relative z-50 border-b border-white/10 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div 
+            className="flex items-center gap-3 cursor-pointer"
+            onClick={() => router.push('/')}
+          >
             <div className="w-9 h-9 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
               <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -18,17 +129,43 @@ export default function Home() {
             <span className="font-semibold text-lg tracking-tight">TradeLog</span>
           </div>
           <div className="hidden md:flex items-center gap-8 text-sm text-gray-400">
-            <a href="#features" className="hover:text-white transition-colors">Features</a>
-            <a href="#pricing" className="hover:text-white transition-colors">Pricing</a>
-            <a href="#testimonials" className="hover:text-white transition-colors">Testimonials</a>
+            <button onClick={() => scrollToSection('features')} className="hover:text-white transition-colors">Features</button>
+            <button onClick={() => scrollToSection('pricing')} className="hover:text-white transition-colors">Pricing</button>
+            <button onClick={() => scrollToSection('testimonials')} className="hover:text-white transition-colors">Testimonials</button>
           </div>
           <div className="flex items-center gap-4">
-            <a href="#pricing" className="hidden sm:block text-sm text-gray-400 hover:text-white transition-colors">
-              Sign in
-            </a>
-            <button className="bg-white text-black px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors">
-              Get Started
-            </button>
+            {isLoggedIn ? (
+              <>
+                <span className="text-sm text-gray-400">{userEmail}</span>
+                <button 
+                  onClick={handleLogout}
+                  className="text-sm text-gray-400 hover:text-white transition-colors"
+                >
+                  Logout
+                </button>
+                <button 
+                  onClick={() => router.push('/dashboard')}
+                  className="bg-white text-black px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+                >
+                  Dashboard
+                </button>
+              </>
+            ) : (
+              <>
+                <button 
+                  onClick={handleSignIn}
+                  className="hidden sm:block text-sm text-gray-400 hover:text-white transition-colors"
+                >
+                  Sign in
+                </button>
+                <button 
+                  onClick={handleGetStarted}
+                  className="bg-white text-black px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+                >
+                  Get Started
+                </button>
+              </>
+            )}
           </div>
         </div>
       </nav>
@@ -58,10 +195,16 @@ export default function Home() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <button className="w-full sm:w-auto bg-white text-black px-8 py-4 rounded-xl text-lg font-semibold hover:bg-gray-200 transition-all hover:scale-105">
+            <button 
+              onClick={handleGetStarted}
+              className="w-full sm:w-auto bg-white text-black px-8 py-4 rounded-xl text-lg font-semibold hover:bg-gray-200 transition-all hover:scale-105"
+            >
               Start free trial
             </button>
-            <button className="w-full sm:w-auto px-8 py-4 rounded-xl text-lg font-medium border border-white/20 hover:bg-white/5 transition-all">
+            <button 
+              onClick={() => scrollToSection('features')}
+              className="w-full sm:w-auto px-8 py-4 rounded-xl text-lg font-medium border border-white/20 hover:bg-white/5 transition-all"
+            >
               See how it works
             </button>
           </div>
@@ -71,8 +214,11 @@ export default function Home() {
           </p>
         </div>
 
-        {/* Dashboard Preview */}
-        <div className="max-w-6xl mx-auto mt-20 px-4">
+        {/* Dashboard Preview - Now Clickable */}
+        <div 
+          className="max-w-6xl mx-auto mt-20 px-4 cursor-pointer hover:scale-[1.02] transition-transform"
+          onClick={() => router.push('/dashboard')}
+        >
           <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-[#111] shadow-2xl shadow-indigo-500/10">
             {/* Browser chrome */}
             <div className="flex items-center gap-2 px-4 py-3 border-b border-white/10 bg-[#0a0a0a]">
@@ -230,7 +376,7 @@ export default function Home() {
               },
               {
                 title: 'Risk Management',
-                desc: 'Track your R-multiples and ensure you\'re risking the right amount on every trade.',
+                desc: "Track your R-multiples and ensure you're risking the right amount on every trade.",
                 icon: (
                   <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
@@ -248,7 +394,7 @@ export default function Home() {
               },
               {
                 title: 'Real-time Alerts',
-                desc: 'Get notified when you break your rules or when your edge starts to deteriorate.',
+                desc: "Get notified when you break your rules or when your edge starts to deteriorate.",
                 icon: (
                   <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
@@ -258,7 +404,8 @@ export default function Home() {
             ].map((feature) => (
               <div
                 key={feature.title}
-                className="group p-6 rounded-2xl bg-white/[0.02] border border-white/10 hover:bg-white/[0.04] hover:border-white/20 transition-all duration-300"
+                className="group p-6 rounded-2xl bg-white/[0.02] border border-white/10 hover:bg-white/[0.04] hover:border-white/20 transition-all duration-300 cursor-pointer"
+                onClick={() => handleGetStarted()}
               >
                 <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/20 flex items-center justify-center text-indigo-400 mb-4 group-hover:scale-110 transition-transform">
                   {feature.icon}
@@ -306,7 +453,8 @@ export default function Home() {
             ].map((testimonial, i) => (
               <div
                 key={i}
-                className="p-6 rounded-2xl bg-white/[0.02] border border-white/10"
+                className="p-6 rounded-2xl bg-white/[0.02] border border-white/10 hover:bg-white/[0.04] transition-colors cursor-pointer"
+                onClick={() => handleGetStarted()}
               >
                 <p className="text-gray-300 mb-6 leading-relaxed">&ldquo;{testimonial.quote}&rdquo;</p>
                 <div className="flex items-center gap-3">
@@ -332,13 +480,13 @@ export default function Home() {
               Simple, transparent pricing
             </h2>
             <p className="text-gray-400 text-lg">
-              Start free. Upgrade when you&apos;re ready.
+              Start free. Upgrade when you're ready.
             </p>
           </div>
 
           <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
             {/* Free */}
-            <div className="p-8 rounded-2xl bg-white/[0.02] border border-white/10">
+            <div className="p-8 rounded-2xl bg-white/[0.02] border border-white/10 hover:bg-white/[0.04] transition-colors">
               <h3 className="text-xl font-semibold mb-2">Starter</h3>
               <p className="text-gray-400 mb-6">Perfect for getting started</p>
               <div className="flex items-baseline gap-1 mb-8">
@@ -360,13 +508,16 @@ export default function Home() {
                   </li>
                 ))}
               </ul>
-              <button className="w-full py-3 rounded-xl border border-white/20 font-medium hover:bg-white/5 transition-colors">
+              <button 
+                onClick={handleGetStarted}
+                className="w-full py-3 rounded-xl border border-white/20 font-medium hover:bg-white/5 transition-colors"
+              >
                 Get started free
               </button>
             </div>
 
             {/* Pro */}
-            <div className="relative p-8 rounded-2xl bg-gradient-to-b from-indigo-500/10 to-purple-500/10 border border-indigo-500/30">
+            <div className="relative p-8 rounded-2xl bg-gradient-to-b from-indigo-500/10 to-purple-500/10 border border-indigo-500/30 hover:from-indigo-500/20 hover:to-purple-500/20 transition-all">
               <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                 <span className="px-3 py-1 rounded-full bg-indigo-500 text-sm font-medium">
                   Most Popular
@@ -396,17 +547,23 @@ export default function Home() {
                   </li>
                 ))}
               </ul>
-              <button className="w-full py-3 rounded-xl bg-white text-black font-medium hover:bg-gray-200 transition-colors">
+              <button 
+                onClick={handleGetStarted}
+                className="w-full py-3 rounded-xl bg-white text-black font-medium hover:bg-gray-200 transition-colors"
+              >
                 Start 14-day trial
               </button>
             </div>
           </div>
 
           <p className="text-center text-gray-500 mt-8">
-            Or get lifetime access for a one-time payment of $199.{' '}
-            <a href="#" className="text-indigo-400 hover:underline">
+            Or get lifetime access for a one-time payment of $199.{" "}
+            <button 
+              onClick={handleGetStarted}
+              className="text-indigo-400 hover:underline"
+            >
               Learn more
-            </a>
+            </button>
           </p>
         </div>
       </section>
@@ -423,14 +580,20 @@ export default function Home() {
             </span>
           </h2>
           <p className="text-xl text-gray-400 mb-10 max-w-2xl mx-auto">
-            Join 10,000+ traders who&apos;ve discovered their edge with TradeLog. 
+            Join 10,000+ traders who've discovered their edge with TradeLog. 
             Your first 100 trades are free.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <button className="w-full sm:w-auto bg-white text-black px-8 py-4 rounded-xl text-lg font-semibold hover:bg-gray-200 transition-all hover:scale-105">
+            <button 
+              onClick={handleGetStarted}
+              className="w-full sm:w-auto bg-white text-black px-8 py-4 rounded-xl text-lg font-semibold hover:bg-gray-200 transition-all hover:scale-105"
+            >
               Create free account
             </button>
-            <button className="w-full sm:w-auto px-8 py-4 rounded-xl text-lg font-medium border border-white/20 hover:bg-white/5 transition-all">
+            <button 
+              onClick={() => scrollToSection('features')}
+              className="w-full sm:w-auto px-8 py-4 rounded-xl text-lg font-medium border border-white/20 hover:bg-white/5 transition-all"
+            >
               See live demo
             </button>
           </div>
@@ -444,7 +607,10 @@ export default function Home() {
       <footer className="border-t border-white/10 py-16 px-6">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
-            <div className="flex items-center gap-3">
+            <div 
+              className="flex items-center gap-3 cursor-pointer"
+              onClick={() => router.push('/')}
+            >
               <div className="w-9 h-9 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
                 <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -453,10 +619,9 @@ export default function Home() {
               <span className="font-semibold text-lg">TradeLog</span>
             </div>
             <div className="flex gap-8 text-sm text-gray-400">
-              <a href="#" className="hover:text-white transition-colors">Privacy</a>
-              <a href="#" className="hover:text-white transition-colors">Terms</a>
-              <a href="#" className="hover:text-white transition-colors">Support</a>
-              <a href="#" className="hover:text-white transition-colors">Twitter</a>
+              <button onClick={() => scrollToSection('features')} className="hover:text-white transition-colors">Features</button>
+              <button onClick={() => scrollToSection('pricing')} className="hover:text-white transition-colors">Pricing</button>
+              <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Twitter</a>
             </div>
           </div>
           <p className="mt-8 text-sm text-gray-600">
