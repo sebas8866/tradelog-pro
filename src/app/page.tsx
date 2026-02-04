@@ -1,8 +1,13 @@
 'use client'
 
 import './globals.css'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+
+interface User {
+  email: string
+  createdAt: string
+}
 
 export default function Home() {
   const router = useRouter()
@@ -10,31 +15,131 @@ export default function Home() {
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signup')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [userEmail, setUserEmail] = useState('')
+  const [authError, setAuthError] = useState('')
+  const [authSuccess, setAuthSuccess] = useState('')
+
+  // Check for existing session on load
+  useEffect(() => {
+    const currentUser = localStorage.getItem('tradelog_current_user')
+    if (currentUser) {
+      const user = JSON.parse(currentUser)
+      setIsLoggedIn(true)
+      setUserEmail(user.email)
+    }
+  }, [])
 
   const handleGetStarted = () => {
     setAuthMode('signup')
+    setAuthError('')
+    setAuthSuccess('')
     setShowAuthModal(true)
   }
 
   const handleSignIn = () => {
     setAuthMode('signin')
+    setAuthError('')
+    setAuthSuccess('')
     setShowAuthModal(true)
+  }
+
+  const validateEmail = (email: string) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
   }
 
   const handleAuth = (e: React.FormEvent) => {
     e.preventDefault()
-    // Simulate auth
-    setIsLoggedIn(true)
-    setUserEmail(email)
-    setShowAuthModal(false)
-    router.push('/dashboard')
+    setAuthError('')
+    setAuthSuccess('')
+
+    // Validation
+    if (!validateEmail(email)) {
+      setAuthError('Please enter a valid email address')
+      return
+    }
+
+    if (password.length < 6) {
+      setAuthError('Password must be at least 6 characters')
+      return
+    }
+
+    if (authMode === 'signup') {
+      // Check if user already exists
+      const existingUsers = JSON.parse(localStorage.getItem('tradelog_users') || '[]')
+      const userExists = existingUsers.find((u: User) => u.email === email)
+      
+      if (userExists) {
+        setAuthError('An account with this email already exists. Please sign in.')
+        return
+      }
+
+      if (password !== confirmPassword) {
+        setAuthError('Passwords do not match')
+        return
+      }
+
+      // Create new user
+      const newUser: User = {
+        email,
+        createdAt: new Date().toISOString()
+      }
+      
+      // Save user to users list
+      existingUsers.push(newUser)
+      localStorage.setItem('tradelog_users', JSON.stringify(existingUsers))
+      
+      // Save password (in real app, this would be hashed)
+      localStorage.setItem(`tradelog_password_${email}`, password)
+      
+      // Set current session
+      localStorage.setItem('tradelog_current_user', JSON.stringify(newUser))
+      
+      setIsLoggedIn(true)
+      setUserEmail(email)
+      setShowAuthModal(false)
+      setEmail('')
+      setPassword('')
+      setConfirmPassword('')
+      
+      // Redirect to dashboard
+      router.push('/dashboard')
+    } else {
+      // Sign in
+      const existingUsers = JSON.parse(localStorage.getItem('tradelog_users') || '[]')
+      const user = existingUsers.find((u: User) => u.email === email)
+      
+      if (!user) {
+        setAuthError('No account found with this email. Please sign up.')
+        return
+      }
+
+      const storedPassword = localStorage.getItem(`tradelog_password_${email}`)
+      if (storedPassword !== password) {
+        setAuthError('Incorrect password. Please try again.')
+        return
+      }
+
+      // Set current session
+      localStorage.setItem('tradelog_current_user', JSON.stringify(user))
+      
+      setIsLoggedIn(true)
+      setUserEmail(email)
+      setShowAuthModal(false)
+      setEmail('')
+      setPassword('')
+      
+      // Redirect to dashboard
+      router.push('/dashboard')
+    }
   }
 
   const handleLogout = () => {
+    localStorage.removeItem('tradelog_current_user')
     setIsLoggedIn(false)
     setUserEmail('')
+    router.push('/')
   }
 
   const scrollToSection = (id: string) => {
@@ -48,16 +153,29 @@ export default function Home() {
       
       {/* Auth Modal */}
       {showAuthModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm">
-          <div className="bg-[#111] border border-white/10 rounded-2xl p-8 max-w-md w-full mx-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-[#111] border border-white/10 rounded-2xl p-8 max-w-md w-full relative">
             <h2 className="text-2xl font-bold mb-2">
               {authMode === 'signup' ? 'Create your account' : 'Welcome back'}
             </h2>
+            
             <p className="text-gray-400 mb-6">
               {authMode === 'signup' 
                 ? 'Start your free 14-day trial today' 
                 : 'Sign in to access your dashboard'}
             </p>
+
+            {authError && (
+              <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
+                {authError}
+              </div>
+            )}
+
+            {authSuccess && (
+              <div className="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-emerald-400 text-sm">
+                {authSuccess}
+              </div>
+            )}
             
             <form onSubmit={handleAuth} className="space-y-4">
               <div>
@@ -66,7 +184,7 @@ export default function Home() {
                   type="email" 
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:border-indigo-500 transition-colors"
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:border-indigo-500 transition-colors text-white"
                   placeholder="you@example.com"
                   required
                 />
@@ -77,11 +195,27 @@ export default function Home() {
                   type="password" 
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:border-indigo-500 transition-colors"
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:border-indigo-500 transition-colors text-white"
                   placeholder="••••••••"
                   required
                 />
+                <p className="text-xs text-gray-500 mt-1">Must be at least 6 characters</p>
               </div>
+
+              {authMode === 'signup' && (
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2">Confirm Password</label>
+                  <input 
+                    type="password" 
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:border-indigo-500 transition-colors text-white"
+                    placeholder="••••••••"
+                    required
+                  />
+                </div>
+              )}
+              
               <button 
                 type="submit"
                 className="w-full bg-white text-black px-4 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
@@ -94,7 +228,11 @@ export default function Home() {
               <p className="text-gray-400 text-sm">
                 {authMode === 'signup' ? 'Already have an account?' : "Don't have an account?"}
                 <button 
-                  onClick={() => setAuthMode(authMode === 'signup' ? 'signin' : 'signup')}
+                  onClick={() => {
+                    setAuthMode(authMode === 'signup' ? 'signin' : 'signup')
+                    setAuthError('')
+                    setAuthSuccess('')
+                  }}
                   className="text-indigo-400 ml-1 hover:underline"
                 >
                   {authMode === 'signup' ? 'Sign in' : 'Sign up'}
@@ -103,7 +241,11 @@ export default function Home() {
             </div>
             
             <button 
-              onClick={() => setShowAuthModal(false)}
+              onClick={() => {
+                setShowAuthModal(false)
+                setAuthError('')
+                setAuthSuccess('')
+              }}
               className="absolute top-4 right-4 text-gray-400 hover:text-white"
             >
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -136,7 +278,7 @@ export default function Home() {
           <div className="flex items-center gap-4">
             {isLoggedIn ? (
               <>
-                <span className="text-sm text-gray-400">{userEmail}</span>
+                <span className="text-sm text-gray-400 hidden sm:block">{userEmail}</span>
                 <button 
                   onClick={handleLogout}
                   className="text-sm text-gray-400 hover:text-white transition-colors"
@@ -405,7 +547,7 @@ export default function Home() {
               <div
                 key={feature.title}
                 className="group p-6 rounded-2xl bg-white/[0.02] border border-white/10 hover:bg-white/[0.04] hover:border-white/20 transition-all duration-300 cursor-pointer"
-                onClick={() => handleGetStarted()}
+                onClick={handleGetStarted}
               >
                 <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/20 flex items-center justify-center text-indigo-400 mb-4 group-hover:scale-110 transition-transform">
                   {feature.icon}
@@ -454,7 +596,7 @@ export default function Home() {
               <div
                 key={i}
                 className="p-6 rounded-2xl bg-white/[0.02] border border-white/10 hover:bg-white/[0.04] transition-colors cursor-pointer"
-                onClick={() => handleGetStarted()}
+                onClick={handleGetStarted}
               >
                 <p className="text-gray-300 mb-6 leading-relaxed">&ldquo;{testimonial.quote}&rdquo;</p>
                 <div className="flex items-center gap-3">
